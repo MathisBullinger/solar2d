@@ -1,0 +1,10 @@
+{
+  "name": "solar2d",
+  "scripts": {
+    "dev": "parcel index.html"
+  },
+  "author": "Mathis Bullinger",
+  "devDependencies": {
+    "parcel": "^2.8.3"
+  }
+}
