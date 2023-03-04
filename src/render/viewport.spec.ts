@@ -22,6 +22,13 @@ describe('viewport', () => {
     expect(vp.vMax).toBe(Math.max(width, height));
   };
 
+  test('left, right, top, bottom', () => {
+    expect(vp.left).toBe(-100);
+    expect(vp.right).toBe(100);
+    expect(vp.top).toBe(-50);
+    expect(vp.bottom).toBe(50);
+  });
+
   test('initial dimensions', () => {
     expectDimensions({ width: 200, height: 100 });
   });

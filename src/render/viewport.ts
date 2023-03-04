@@ -21,6 +21,18 @@ export default (element: VPElement, initialVmin: number) => {
   const vp = {
     x: 0,
     y: 0,
+    get left() {
+      return vp.x - vp.width / 2;
+    },
+    get right() {
+      return vp.x + vp.width / 2;
+    },
+    get top() {
+      return vp.y - vp.height / 2;
+    },
+    get bottom() {
+      return vp.y + vp.height / 2;
+    },
     get vMin() {
       return vMin;
     },
