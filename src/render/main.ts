@@ -1,4 +1,5 @@
 import makeViewport from './viewport';
+import { hexColor } from './util';
 
 const canvas = document.querySelector('canvas')!;
 const ctx = canvas.getContext('2d')!;
@@ -42,27 +43,22 @@ export const render = () => {
   renderBody({ x: 0, y: 0, radius: 50 });
 };
 
-const renderGrid = () => {
+const renderGrid = (opacityMajor = 0x88) => {
   const log10 = Math.log10(vp.vMin);
   const spacing = 10 ** (Math.floor(log10) - 1);
-  const opacity = 1 - (log10 % 1);
-  const opacityHex = Math.floor(opacity * 0xff)
-    .toString(16)
-    .padStart(2, '0');
+  const majorStep = spacing * 10;
+  const opacityMinor = (1 - (log10 % 1)) ** 2 * opacityMajor;
+  const clMajor = hexColor(0xff, 0xff, 0xff, opacityMajor);
+  const clMinor = hexColor(0xff, 0xff, 0xff, opacityMinor);
 
   const left = vp.left;
   const right = vp.right;
   const top = vp.top;
   const bottom = vp.bottom;
 
-  const setStyle = (n: number) => {
-    const isMajor = n % (spacing * 10) === 0;
-    ctx.strokeStyle = isMajor ? '#fff' : `#ffffff${opacityHex}`;
-  };
-
   for (let x = left - (left % spacing); x < right; x += spacing) {
     const screenX = ((x - left) / vp.width) * canvas.width;
-    setStyle(x);
+    ctx.strokeStyle = x % majorStep ? clMinor : clMajor;
     ctx.beginPath();
     ctx.moveTo(screenX, 0);
     ctx.lineTo(screenX, canvas.height);
@@ -71,7 +67,7 @@ const renderGrid = () => {
 
   for (let y = top - (top % spacing); y < bottom; y += spacing) {
     const screenY = ((y - top) / vp.height) * canvas.height;
-    setStyle(y);
+    ctx.strokeStyle = y % majorStep ? clMinor : clMajor;
     ctx.beginPath();
     ctx.moveTo(0, screenY);
     ctx.lineTo(canvas.width, screenY);
