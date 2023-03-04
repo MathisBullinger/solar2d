@@ -1,6 +1,7 @@
 import makeViewport from './viewport';
 import createContext from './context';
 import rootBody, { Body } from '../system';
+import * as constants from './constants';
 
 const canvas = document.querySelector('canvas')!;
 
@@ -23,11 +24,16 @@ canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   const pinch = e.ctrlKey;
 
-  if (!pinch) {
-    vp.x += e.deltaX * 5e-4 * vp.vMin;
-    vp.y += e.deltaY * 5e-4 * vp.vMin;
+  if (pinch) {
+    const targetX = (e.clientX / canvas.width) * devicePixelRatio;
+    const targetY = (e.clientY / canvas.height) * devicePixelRatio;
+    const dz = e.deltaY * constants.SCALE_ZOOM + 1;
+    vp.x += (targetX - 0.5) * (vp.width - dz * vp.width);
+    vp.y += (targetY - 0.5) * (vp.height - dz * vp.height);
+    vp.vMin *= dz;
   } else {
-    vp.vMin *= 1 + e.deltaY * 3e-3;
+    vp.x += e.deltaX * constants.SCALE_PAN * vp.vMin;
+    vp.y += e.deltaY * constants.SCALE_PAN * vp.vMin;
   }
 });
 
