@@ -2,6 +2,7 @@ import makeViewport from './viewport';
 import createContext from './context';
 import rootBody, { Body } from '../system';
 import * as constants from './constants';
+import Vector from '../math/vector';
 
 const canvas = document.querySelector('canvas')!;
 
@@ -20,6 +21,12 @@ const canvas = document.querySelector('canvas')!;
 
 const vp = makeViewport(canvas, rootBody.radius * 4);
 
+const pan = (dPx: Vector) => {
+  const offset = dPx.times(constants.SCALE_PAN * vp.vMin);
+  vp.x += offset.x;
+  vp.y += offset.y;
+};
+
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   const pinch = e.ctrlKey;
@@ -32,9 +39,22 @@ canvas.addEventListener('wheel', (e) => {
     vp.y += (targetY - 0.5) * (vp.height - dz * vp.height);
     vp.vMin *= dz;
   } else {
-    vp.x += e.deltaX * constants.SCALE_PAN * vp.vMin;
-    vp.y += e.deltaY * constants.SCALE_PAN * vp.vMin;
+    pan(new Vector(e.deltaX, e.deltaY));
   }
+});
+
+canvas.addEventListener('pointerdown', () => {
+  const onMove = (e: PointerEvent) => {
+    pan(new Vector(e.movementX, e.movementY).times(-devicePixelRatio));
+  };
+  window.addEventListener('pointermove', onMove);
+  const cancel = () => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', cancel);
+    window.removeEventListener('pointerout', cancel);
+  };
+  window.addEventListener('pointerup', cancel);
+  window.addEventListener('pointerout', cancel);
 });
 
 const ctx = createContext(canvas, vp);
