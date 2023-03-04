@@ -1,9 +1,10 @@
 import type { Viewport } from '../../viewport';
 import { color } from '../../../util';
 import { Body } from '../../../system';
+import Vector from '../../../math/vector';
 
 export default (canvas: HTMLCanvasElement, vp: Viewport) => {
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d', { desynchronized: true })!;
 
   const clear = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -43,15 +44,32 @@ export default (canvas: HTMLCanvasElement, vp: Viewport) => {
     }
   };
 
+  const screenSpace = (pos: Vector) =>
+    pos
+      .sub(vp.x, vp.y)
+      .div(vp.width, vp.height)
+      .add(0.5)
+      .mul(canvas.width, canvas.height);
+
   const renderBody = (body: Body) => {
     const scale = Math.min(canvas.width, canvas.height);
     const radiusPx = (body.radius / vp.vMin) * scale;
-    const [rx, ry] = body.getRelativePosition();
-    const x = (0.5 + (rx - vp.x) / vp.width) * canvas.width;
-    const y = (0.5 + (ry - vp.y) / vp.height) * canvas.height;
+    const { x, y } = screenSpace(body.getRelativePosition());
+
+    if (body.parent) {
+      const center = screenSpace(body.parent.getRelativePosition());
+      renderOrbit(
+        center.x,
+        center.y,
+        (body.semiMajorAxis / vp.width) * canvas.width
+      );
+    }
 
     if (radiusPx > 1) renderBodyShape(x, y, radiusPx);
-    if (radiusPx < 3) renderBodyTarget(x, y);
+    if (radiusPx < 3) {
+      if (!body.parent || (body.semiMajorAxis / vp.width) * canvas.width > 50)
+        renderBodyTarget(x, y);
+    }
   };
 
   const renderBodyShape = (x: number, y: number, radius: number) => {
@@ -66,6 +84,15 @@ export default (canvas: HTMLCanvasElement, vp: Viewport) => {
     ctx.strokeStyle = '#fff';
     ctx.beginPath();
     ctx.arc(x, y, 20, 0, 2 * Math.PI);
+    ctx.stroke();
+  };
+
+  const renderOrbit = (x: number, y: number, radius: number) => {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    const off = 0.02;
+    ctx.arc(x, y, radius, off * Math.PI, (2 - off) * Math.PI);
     ctx.stroke();
   };
 

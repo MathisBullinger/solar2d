@@ -1,4 +1,5 @@
 import systemData from '../data/system.json';
+import Vector from './math/vector';
 
 export class Body {
   public parent: Body | null = null;
@@ -13,9 +14,9 @@ export class Body {
     parent.children.add(this);
   }
 
-  public getRelativePosition(): [x: number, y: number] {
-    if (!this.parent) return [0, 0];
-    return [this.semiMajorAxis, 0];
+  public getRelativePosition(): Vector {
+    if (!this.parent) return new Vector(0, 0);
+    return new Vector(this.semiMajorAxis, 0);
   }
 }
 
