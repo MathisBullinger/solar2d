@@ -3,7 +3,7 @@ import createContext from './context';
 import rootBody, { Body } from '../system';
 import * as constants from './constants';
 import Vector from '../math/vector';
-import { timed } from './util';
+import { fn, ease } from '../util';
 
 const canvas = document.querySelector('canvas')!;
 
@@ -22,13 +22,13 @@ const canvas = document.querySelector('canvas')!;
 
 const vp = makeViewport(canvas, rootBody.radius * 4);
 
-const pan = timed((dPx: Vector) => {
+const pan = fn.timed((dPx: Vector) => {
   const offset = dPx.mul(constants.SCALE_PAN * vp.vMin);
   vp.x += offset.x;
   vp.y += offset.y;
 });
 
-const zoom = timed((dPx: number, { x, y } = new Vector(0.5, 0.5)) => {
+const zoom = fn.timed((dPx: number, { x, y } = new Vector(0.5, 0.5)) => {
   const dz = dPx * constants.SCALE_ZOOM + 1;
   vp.x += (x - 0.5) * (vp.width - dz * vp.width);
   vp.y += (y - 0.5) * (vp.width - dz * vp.width);
@@ -73,15 +73,31 @@ export const render = (dtMs: number) => {
   renderSystem(rootBody);
 };
 
+let _gridRenderStart = 0;
+
 const renderGrid = () => {
   const dt = Math.min(zoom.dtMs, pan.dtMs);
-  if (dt > constants.GRID_MAX_MS) return;
-  const opacity =
-    dt < constants.GRID_MAX_MS * 0.75
-      ? 1
-      : 1 -
-        (dt - constants.GRID_MAX_MS * 0.75) / (constants.GRID_MAX_MS * 0.25);
-  ctx.renderGrid(opacity ** 2 * 0x77);
+  if (dt > constants.GRID_MAX_MS) {
+    _gridRenderStart = 0;
+    return;
+  }
+
+  if (!_gridRenderStart) _gridRenderStart = performance.now();
+  const dtStart = performance.now() - _gridRenderStart;
+
+  const fadeInDuration = constants.GRID_MAX_MS * 0.1;
+  const fadeOutDuration = constants.GRID_MAX_MS * 0.25;
+
+  let opacityMultiplier = 1;
+
+  if (dtStart < fadeInDuration)
+    opacityMultiplier = ease.outQuad(dtStart / fadeInDuration);
+  else if (constants.GRID_MAX_MS - dt < fadeOutDuration)
+    opacityMultiplier = ease.outQuad(
+      1 - (dt - (constants.GRID_MAX_MS - fadeOutDuration)) / fadeOutDuration
+    );
+
+  ctx.renderGrid(opacityMultiplier * 0x77);
 };
 
 const renderSystem = (body: Body) => {

@@ -1,8 +1,3 @@
-export const hexColor = (r: number, g: number, b: number, a = 0xff) =>
-  `#${[r, g, b, a].map(hex2).join('')}`;
-
-const hex2 = (n: number) => Math.floor(n).toString(16).padStart(2, '0');
-
 export const timed = <T extends (...args: any[]) => any>(fn: T): Timed<T> => {
   let last: number | null = null;
 
