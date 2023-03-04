@@ -8,7 +8,7 @@ import { render } from './render/main';
     const dt = lastRender - now;
     lastRender = now;
 
-    render();
+    render(dt);
 
     requestAnimationFrame(step);
   };
