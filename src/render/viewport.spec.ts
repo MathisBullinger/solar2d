@@ -2,14 +2,9 @@ import { describe, test, expect } from 'vitest';
 import makeViewport from './viewport';
 
 describe('viewport', () => {
-  const resizeListeners: (() => void)[] = [];
-
   const canvas = {
     width: 2,
     height: 1,
-    addEventListener(_: string, cb: () => void) {
-      resizeListeners.push(cb);
-    },
   };
 
   const vp = makeViewport(canvas, 100);
@@ -53,13 +48,13 @@ describe('viewport', () => {
 
   test('resize', () => {
     canvas.height = 8;
-    resizeListeners.forEach((cb) => cb());
+    vp.resize();
     expectDimensions({ width: 500, height: 2000 });
     canvas.width = 16;
-    resizeListeners.forEach((cb) => cb());
+    vp.resize();
     expectDimensions({ width: 1000, height: 500 });
     canvas.height = 2;
-    resizeListeners.forEach((cb) => cb());
+    vp.resize();
     expectDimensions({ width: 4000, height: 500 });
   });
 });

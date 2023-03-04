@@ -18,11 +18,9 @@ export default (element: VPElement, initialVmin: number) => {
     [width, height] = getDimensions();
   };
 
-  element.addEventListener('resize', () => {
-    setVMin(vMin);
-  });
-
   const vp = {
+    x: 0,
+    y: 0,
     get vMin() {
       return vMin;
     },
@@ -47,6 +45,9 @@ export default (element: VPElement, initialVmin: number) => {
     set height(n: number) {
       setVMin(n * Math.min(1, element.width / element.height));
     },
+    resize() {
+      setVMin(vMin);
+    },
   };
 
   return vp;
@@ -55,5 +56,4 @@ export default (element: VPElement, initialVmin: number) => {
 type VPElement = {
   width: number;
   height: number;
-  addEventListener: (event: 'resize', cb: () => void) => void;
 };
