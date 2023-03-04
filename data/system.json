@@ -1,3 +1,11 @@
 {
-  "sun": {}
+  "earth": {
+    "radius": 6378.14,
+    "children": {
+      "moon": {
+        "radius": 1737.4,
+        "a": 384399
+      }
+    }
+  }
 }

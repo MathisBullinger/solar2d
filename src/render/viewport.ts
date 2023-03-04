@@ -1,4 +1,4 @@
-export default (element: VPElement, initialVmin: number) => {
+const makeViewport = (element: VPElement, initialVmin: number) => {
   let vMin = initialVmin;
 
   const getDimensions = (): [width: number, height: number] => [
@@ -64,6 +64,10 @@ export default (element: VPElement, initialVmin: number) => {
 
   return vp;
 };
+
+export default makeViewport;
+
+export type Viewport = ReturnType<typeof makeViewport>;
 
 type VPElement = {
   width: number;
