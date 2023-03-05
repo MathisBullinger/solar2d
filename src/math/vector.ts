@@ -22,7 +22,7 @@ const opFactory = <T extends number>(lhs: Vector<T>) => ({
     },
 });
 
-export default class Vector<T extends number> {
+export default class Vector<T extends number = any> {
   private op = opFactory<T>(this);
   public readonly components: number[];
 

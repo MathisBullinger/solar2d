@@ -1,16 +1,67 @@
 import type { Viewport } from '../../viewport';
-import { color } from '../../../util';
+import { color, ease } from '../../../util';
 import { Body } from '../../../system';
 import Vector from '../../../math/vector';
+import Matrix from '../../../math/matrix';
+import * as constants from '../../constants';
+import { pan, zoom } from '../../../interaction';
 
-export default (canvas: HTMLCanvasElement, vp: Viewport) => {
+export type Scene = {
+  rootBody: Body;
+};
+
+export default (canvas: HTMLCanvasElement, vp: Viewport, scene: Scene) => {
   const ctx = canvas.getContext('2d', { desynchronized: true })!;
+
+  const render = () => {
+    const translation = new Vector<2>(-vp.left, -vp.top)
+      .div(vp.width, vp.height)
+      .mul(canvas.width, canvas.height);
+
+    const scale = new Vector<2>(canvas.width, canvas.height).div(
+      vp.width,
+      vp.height
+    );
+
+    const transformation = Matrix.translate(translation).mul(
+      Matrix.scale(scale)
+    );
+
+    clear();
+    renderGrid();
+    renderSystem(scene.rootBody, transformation);
+  };
 
   const clear = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const renderGrid = (opacityMajor = 0x88) => {
+  let _gridRenderStart = 0;
+
+  const renderGrid = () => {
+    const dt = Math.min(zoom.dtMs, pan.dtMs);
+    if (dt > constants.GRID_MAX_MS) {
+      _gridRenderStart = 0;
+      return;
+    }
+
+    if (!_gridRenderStart) _gridRenderStart = performance.now();
+    const dtStart = performance.now() - _gridRenderStart;
+
+    const fadeInDuration = constants.GRID_MAX_MS * 0.1;
+    const fadeOutDuration = constants.GRID_MAX_MS * 0.25;
+
+    let opacityMultiplier = 1;
+
+    if (dtStart < fadeInDuration)
+      opacityMultiplier = ease.outQuad(dtStart / fadeInDuration);
+    else if (constants.GRID_MAX_MS - dt < fadeOutDuration)
+      opacityMultiplier = ease.outQuad(
+        1 - (dt - (constants.GRID_MAX_MS - fadeOutDuration)) / fadeOutDuration
+      );
+
+    const opacityMajor = 0x44 * opacityMultiplier;
+
     const log10 = Math.log10(vp.vMin);
     const spacing = 10 ** (Math.floor(log10) - 1);
     const majorStep = spacing * 10;
@@ -44,17 +95,23 @@ export default (canvas: HTMLCanvasElement, vp: Viewport) => {
     }
   };
 
-  const screenSpace = (pos: Vector) =>
+  const screenSpace = (pos: Vector<2>) =>
     pos
       .sub(vp.x, vp.y)
       .div(vp.width, vp.height)
       .add(0.5)
       .mul(canvas.width, canvas.height);
 
-  const renderBody = (body: Body) => {
+  const renderSystem = (body: Body, transform: Matrix<3, 3>) => {
+    renderBody(body, transform);
+    body.children.forEach((child) => renderSystem(child, transform));
+  };
+
+  const renderBody = (body: Body, transform: Matrix<3, 3>) => {
     const scale = Math.min(canvas.width, canvas.height);
     const radiusPx = (body.radius / vp.vMin) * scale;
-    const { x, y } = screenSpace(body.getRelativePosition());
+
+    const { x, y } = transform.mul(body.getRelativePosition().resize(3, 1));
 
     if (body.parent) {
       const center = screenSpace(body.parent.getRelativePosition());
@@ -88,13 +145,13 @@ export default (canvas: HTMLCanvasElement, vp: Viewport) => {
   };
 
   const renderOrbit = (x: number, y: number, radius: number) => {
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#888';
     ctx.beginPath();
     const off = 0.02;
     ctx.arc(x, y, radius, off * Math.PI, (2 - off) * Math.PI);
     ctx.stroke();
   };
 
-  return { clear, renderGrid, renderBody };
+  return { render };
 };

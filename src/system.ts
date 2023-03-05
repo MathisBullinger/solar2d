@@ -14,7 +14,7 @@ export class Body {
     parent.children.add(this);
   }
 
-  public getRelativePosition(): Vector {
+  public getRelativePosition(): Vector<2> {
     if (!this.parent) return new Vector(0, 0);
     return new Vector(this.semiMajorAxis, 0);
   }
