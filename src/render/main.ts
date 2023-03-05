@@ -11,6 +11,8 @@ const canvas = document.querySelector('canvas')!;
   };
 
   setCanvasSize();
+  vp.resize();
+
   window.addEventListener('resize', () => {
     setCanvasSize();
     vp.resize();

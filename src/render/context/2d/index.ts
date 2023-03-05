@@ -5,6 +5,7 @@ import Vector from '../../../math/vector';
 import Matrix from '../../../math/matrix';
 import * as constants from '../../constants';
 import { pan, zoom } from '../../../interaction';
+import * as ui from './ui';
 
 export type Scene = {
   rootBody: Body;
@@ -28,7 +29,7 @@ export default (canvas: HTMLCanvasElement, vp: Viewport, scene: Scene) => {
     );
 
     clear();
-    renderGrid();
+    renderGrid(Math.min(pan.dtMs, zoom.dtMs) < constants.GRID_MAX_MS);
     renderSystem(scene.rootBody, transformation);
   };
 
@@ -36,30 +37,7 @@ export default (canvas: HTMLCanvasElement, vp: Viewport, scene: Scene) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  let _gridRenderStart = 0;
-
-  const renderGrid = () => {
-    const dt = Math.min(zoom.dtMs, pan.dtMs);
-    if (dt > constants.GRID_MAX_MS) {
-      _gridRenderStart = 0;
-      return;
-    }
-
-    if (!_gridRenderStart) _gridRenderStart = performance.now();
-    const dtStart = performance.now() - _gridRenderStart;
-
-    const fadeInDuration = constants.GRID_MAX_MS * 0.1;
-    const fadeOutDuration = constants.GRID_MAX_MS * 0.25;
-
-    let opacityMultiplier = 1;
-
-    if (dtStart < fadeInDuration)
-      opacityMultiplier = ease.outQuad(dtStart / fadeInDuration);
-    else if (constants.GRID_MAX_MS - dt < fadeOutDuration)
-      opacityMultiplier = ease.outQuad(
-        1 - (dt - (constants.GRID_MAX_MS - fadeOutDuration)) / fadeOutDuration
-      );
-
+  const renderGrid = ui.fading((opacityMultiplier) => {
     const opacityMajor = 0x44 * opacityMultiplier;
 
     const log10 = Math.log10(vp.vMin);
@@ -93,7 +71,7 @@ export default (canvas: HTMLCanvasElement, vp: Viewport, scene: Scene) => {
       ctx.lineTo(canvas.width, screenY);
       ctx.stroke();
     }
-  };
+  });
 
   const screenSpace = (pos: Vector<2>) =>
     pos
