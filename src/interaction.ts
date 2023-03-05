@@ -22,7 +22,7 @@ export const zoom = fn.timed(
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
-  const pinch = e.ctrlKey;
+  const pinch = e.ctrlKey || e.shiftKey;
 
   if (pinch) {
     zoom(

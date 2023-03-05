@@ -1,5 +1,5 @@
 import type { Viewport } from '../../viewport';
-import { color, ease } from '../../../util';
+import { color } from '../../../util';
 import { Body } from '../../../system';
 import Vector from '../../../math/vector';
 import Matrix from '../../../math/matrix';
@@ -37,6 +37,83 @@ export default (canvas: HTMLCanvasElement, vp: Viewport, scene: Scene) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
+  const renderSystem = (body: Body, transform: Matrix<3, 3>) => {
+    const screenGraph = buildScreenGraph(body, transform);
+    renderScreenGraph(screenGraph);
+  };
+
+  type ScreenGraph = {
+    body: Body;
+    position: Vector<2>;
+    radius: number;
+    parent: ScreenGraph | null;
+    children?: ScreenGraph[];
+  };
+
+  const buildScreenGraph = (
+    body: Body,
+    screenSpaceTransform: Matrix<3, 3>,
+    parent: ScreenGraph | null = null
+  ): ScreenGraph => {
+    const position = screenSpaceTransform
+      .mul(body.getRelativePosition().resize(3, 1))
+      .resize(2);
+
+    const scale = Math.min(canvas.width, canvas.height);
+    const radius = (body.radius / vp.vMin) * scale;
+
+    const node: ScreenGraph = {
+      body,
+      position,
+      radius,
+      parent,
+    };
+
+    node.children = [...body.children].map((child) =>
+      buildScreenGraph(child, screenSpaceTransform, node)
+    );
+
+    return node;
+  };
+
+  const renderScreenGraph = (node: ScreenGraph) => {
+    if (node.parent) {
+      renderOrbit(
+        node.parent.position,
+        (node.body.semiMajorAxis / vp.width) * canvas.width
+      );
+    }
+
+    if (node.radius > 1) renderBodyShape(node.position, node.radius);
+    if (node.radius < 3) renderBodyTarget(node.position);
+
+    node.children?.forEach(renderScreenGraph);
+  };
+
+  const renderBodyShape = ({ x, y }: Vector<2>, radius: number) => {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.fill();
+  };
+
+  const renderBodyTarget = ({ x, y }: Vector<2>) => {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, 2 * Math.PI);
+    ctx.stroke();
+  };
+
+  const renderOrbit = ({ x, y }: Vector<2>, radius: number) => {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#888';
+    ctx.beginPath();
+    const off = 0.02;
+    ctx.arc(x, y, radius, off * Math.PI, (2 - off) * Math.PI);
+    ctx.stroke();
+  };
+
   const renderGrid = ui.fading((opacityMultiplier) => {
     const opacityMajor = 0x44 * opacityMultiplier;
 
@@ -72,64 +149,6 @@ export default (canvas: HTMLCanvasElement, vp: Viewport, scene: Scene) => {
       ctx.stroke();
     }
   });
-
-  const screenSpace = (pos: Vector<2>) =>
-    pos
-      .sub(vp.x, vp.y)
-      .div(vp.width, vp.height)
-      .add(0.5)
-      .mul(canvas.width, canvas.height);
-
-  const renderSystem = (body: Body, transform: Matrix<3, 3>) => {
-    renderBody(body, transform);
-    body.children.forEach((child) => renderSystem(child, transform));
-  };
-
-  const renderBody = (body: Body, transform: Matrix<3, 3>) => {
-    const scale = Math.min(canvas.width, canvas.height);
-    const radiusPx = (body.radius / vp.vMin) * scale;
-
-    const { x, y } = transform.mul(body.getRelativePosition().resize(3, 1));
-
-    if (body.parent) {
-      const center = screenSpace(body.parent.getRelativePosition());
-      renderOrbit(
-        center.x,
-        center.y,
-        (body.semiMajorAxis / vp.width) * canvas.width
-      );
-    }
-
-    if (radiusPx > 1) renderBodyShape(x, y, radiusPx);
-    if (radiusPx < 3) {
-      if (!body.parent || (body.semiMajorAxis / vp.width) * canvas.width > 50)
-        renderBodyTarget(x, y);
-    }
-  };
-
-  const renderBodyShape = (x: number, y: number, radius: number) => {
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * Math.PI);
-    ctx.fill();
-  };
-
-  const renderBodyTarget = (x: number, y: number) => {
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(x, y, 20, 0, 2 * Math.PI);
-    ctx.stroke();
-  };
-
-  const renderOrbit = (x: number, y: number, radius: number) => {
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#888';
-    ctx.beginPath();
-    const off = 0.02;
-    ctx.arc(x, y, radius, off * Math.PI, (2 - off) * Math.PI);
-    ctx.stroke();
-  };
 
   return { render };
 };
