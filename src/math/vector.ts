@@ -1,15 +1,19 @@
-type ComponentWise<T> = {
+import { Tuple, Subtract } from './types';
+
+type ComponentWise<T, N extends number> = {
   (n: number): T;
-  (x: number, y: number): T;
-  (rhs: Vector): T;
+  (...components: Tuple<N>): T;
+  (rhs: Vector<N>): T;
 };
 
-const opFactory = (lhs: Vector) => ({
+const opFactory = <T extends number>(lhs: Vector<T>) => ({
   componentWise:
-    (cb: (left: number, right: number) => number): ComponentWise<Vector> =>
+    (
+      cb: (left: number, right: number) => number
+    ): ComponentWise<Vector<T>, T> =>
     (...args: any[]) => {
       const rhs = args[0] instanceof Vector ? args[0].components : args;
-      return new Vector(
+      return new (Vector as any)(
         ...(lhs.components.map((v, i) => cb(v, rhs[i] ?? rhs[0])) as [
           number,
           number
@@ -18,10 +22,12 @@ const opFactory = (lhs: Vector) => ({
     },
 });
 
-export default class Vector {
-  private op = opFactory(this);
+export default class Vector<T extends number> {
+  private op = opFactory<T>(this);
+  public readonly components: number[];
 
-  constructor(public readonly x: number, public readonly y: number) {
+  constructor(...values: Tuple<T>) {
+    this.components = values;
     this.add = this.add.bind(this);
   }
 
@@ -31,7 +37,25 @@ export default class Vector {
   public div = this.op.componentWise((a, b) => a / b);
   public exp = this.op.componentWise((a, b) => a ** b);
 
-  public get components(): [x: number, y: number] {
-    return [this.x, this.y];
+  public resize<N extends number>(
+    length: N,
+    ...components: Tuple<Subtract<N, T>>
+  ): Vector<N> {
+    if (length <= this.components.length)
+      return new Vector<N>(...(this.components.slice(0, length) as Tuple<N>));
+
+    return new (Vector as any)(
+      ...[...this.components, ...(components as any[])].slice(0, length)
+    );
+  }
+
+  public get x() {
+    return this.components[0];
+  }
+  public get y() {
+    return this.components[1];
+  }
+  public get z() {
+    return this.components[2];
   }
 }
